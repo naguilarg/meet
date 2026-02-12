@@ -6,55 +6,67 @@ import MinimalLogo from './MinimalLogo';
 const Meet = ({ setCurrentView }) => {
     // State for Lobby vs Meeting
     const [inMeeting, setInMeeting] = useState(false);
-    const [roomName, setRoomName] = useState("");
-    const [userName, setUserName] = useState("");
-    
-    // Admin / Setup States
-    const [showAdminPanel, setShowAdminPanel] = useState(false);
-    const [adminPasswordInput, setAdminPasswordInput] = useState("");
-    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-    
-    // Room Configuration (Admin Only)
-    const [newRoomPassword, setNewRoomPassword] = useState("");
-    const [enableLobby, setEnableLobby] = useState(true);
 
-    // Jitsi API Ref
+    // State for inputs
+    const [roomName, setRoomName] = useState('');
+    const [userName, setUserName] = useState('');
+
+    // State for Admin Panel
+    const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+    const [adminPasswordInput, setAdminPasswordInput] = useState('');
+    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
+
+    // State for new room configuration (Admin only)
+    const [newRoomPassword, setNewRoomPassword] = useState('');
+
+    // Jitsi ref
     const jitsiRef = useRef(null);
     const jitsiApiRef = useRef(null);
 
-    // 1. Load Jitsi Script Dynamically
+    // Variants for animations
+    const containerVariants = {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.8, ease: "easeOut" } },
+        exit: { opacity: 0, transition: { duration: 0.5 } }
+    };
+
+    const panelVariants = {
+        hidden: { opacity: 0, scale: 0.9, y: 20 },
+        visible: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 25 } },
+        exit: { opacity: 0, scale: 0.95, y: 10 }
+    };
+
+    // Helper to load Jitsi script
     useEffect(() => {
         if (!window.JitsiMeetExternalAPI) {
             const script = document.createElement("script");
-            script.src = "https://meet.colmillo.es/external_api.js";
+            script.src = "https://meet.jit.si/external_api.js";
             script.async = true;
             document.body.appendChild(script);
         }
     }, []);
 
-    // 2. Initialize Meeting
+    const handleJoinRoom = (isCreating = false) => {
+        if (!roomName.trim() || !userName.trim()) return;
+        setInMeeting(true);
+    };
+
+    // Initialize Jitsi when inMeeting becomes true
     useEffect(() => {
         if (inMeeting && window.JitsiMeetExternalAPI) {
-            const domain = "meet.colmillo.es";
-            
-            // Generate a secure or simple room name if input is empty, though UI enforces it.
-            const finalRoomName = roomName || "SalaColmilloGenerica";
-
+            const domain = "meet.jit.si";
             const options = {
-                roomName: finalRoomName,
+                roomName: roomName,
                 width: '100%',
                 height: '100%',
                 parentNode: jitsiRef.current,
                 userInfo: {
-                    displayName: userName || "Invitado Colmillo"
+                    displayName: userName
                 },
                 configOverwrite: {
                     prejoinPageEnabled: false,
                     startWithAudioMuted: true,
                     startWithVideoMuted: true,
-                    // If Admin enabled lobby for this session creation:
-                    // Note: 'lobby' param in config might require admin rights on Jitsi side or specific implementation.
-                    // Standard Jitsi meet.jit.si supports password setting after join.
                 },
                 interfaceConfigOverwrite: {
                     TOOLBAR_BUTTONS: [
@@ -75,49 +87,32 @@ const Meet = ({ setCurrentView }) => {
             const api = new window.JitsiMeetExternalAPI(domain, options);
             jitsiApiRef.current = api;
 
-            // Event Listeners
+            // Handle Events
             api.addEventListeners({
                 readyToClose: () => {
-                   handleHangup();
+                    handleHangup();
                 },
                 videoConferenceJoined: () => {
-                    // If Admin, set password immediately
                     if (isAdminAuthenticated && newRoomPassword) {
                         api.executeCommand('password', newRoomPassword);
-                        // api.executeCommand('toggleLobby', true); // Try to enable lobby if supported/authorized
                     }
                 }
             });
         }
-        
-        // Cleanup
-        return () => {
-            if (jitsiApiRef.current) {
-                jitsiApiRef.current.dispose();
-                jitsiApiRef.current = null;
-            }
-        };
-    }, [inMeeting]); 
-    // Effect dependency note: logic inside only runs when inMeeting becomes true.
-
-    const handleJoin = (e) => {
-        e.preventDefault();
-        if (roomName && userName) {
-            setInMeeting(true);
-        }
-    };
+    }, [inMeeting, roomName, userName, isAdminAuthenticated, newRoomPassword]);
 
     const handleHangup = () => {
-        setInMeeting(false);
         if (jitsiApiRef.current) {
             jitsiApiRef.current.dispose();
             jitsiApiRef.current = null;
         }
+        setInMeeting(false);
+        // Reset sensitive admin states optionally, or keep for re-entry
+        setNewRoomPassword('');
     };
 
     const handleAdminUnlock = () => {
-        // Simple client-side check for demonstration. 
-        // In detailed implementation, this might hit an API endpoint.
+        // Simple client-side check for now as requested
         if (adminPasswordInput === 'colmillo2024') {
             setIsAdminAuthenticated(true);
             setAdminPasswordInput('');
@@ -126,351 +121,332 @@ const Meet = ({ setCurrentView }) => {
         }
     };
 
-    // --- RENDER ---
-
-    if (inMeeting) {
-        return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    backgroundColor: '#000',
-                    zIndex: 2000
-                }}
-            >
-                {/* Custom Overlay Header for "Exit" */}
-                <div style={{
-                    position: 'absolute',
-                    top: '20px',
-                    left: '20px',
-                    zIndex: 2010
-                }}>
-                     <MinimalLogo />
-                </div>
-                
-                <button 
-                    onClick={handleHangup}
-                    style={{
-                        position: 'absolute',
-                        top: '30px',
-                        right: '30px',
-                        zIndex: 2010,
-                        color: 'white',
-                        background: 'rgba(0,0,0,0.5)',
-                        padding: '10px 20px',
-                        borderRadius: '30px',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        textTransform: 'uppercase',
-                        fontSize: '0.8rem',
-                        letterSpacing: '2px'
-                    }}
-                >
-                    <X size={16} /> Salir
-                </button>
-
-                <div ref={jitsiRef} style={{ width: '100%', height: '100%' }} />
-            </motion.div>
-        );
-    }
-
     return (
         <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            variants={containerVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
             style={{
-                width: '100vw',
+                width: '100%',
                 height: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                background: '#000',
-                color: '#fff',
                 position: 'relative',
+                background: '#0a0a0a',
+                color: '#fff',
+                fontFamily: 'var(--font-sans)',
                 overflow: 'hidden'
             }}
         >
-             {/* Background Ambience */}
-             <div style={{
-                 position: 'absolute',
-                 top: 0,
-                 left: 0,
-                 width: '100%',
-                 height: '100%',
-                 background: 'radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000 70%)',
-                 zIndex: 0
-             }} />
+            {/* Logo in corner */}
+            <div style={{ position: 'absolute', top: 40, left: 40, zIndex: 50, cursor: 'pointer', width: '50px' }} onClick={() => setCurrentView('home')}>
+                <MinimalLogo />
+            </div>
 
-             {/* Close Button to return to App */}
-             <button 
-                onClick={() => setCurrentView('home')}
-                style={{
-                    position: 'absolute',
-                    top: '40px',
-                    right: '40px',
-                    zIndex: 20,
-                    opacity: 0.7,
-                    transition: 'opacity 0.3s'
-                }}
-                onMouseEnter={(e) => e.target.style.opacity = 1}
-                onMouseLeave={(e) => e.target.style.opacity = 0.7}
-             >
-                 <X size={24} />
-             </button>
-
-             {/* Admin Trigger (Subtle) */}
-             <button
-                onClick={() => setShowAdminPanel(true)}
-                style={{
-                    position: 'absolute',
-                    top: '40px',
-                    left: '50%', // Centered or hidden somewhere distinct
-                    transform: 'translateX(-50%)', // Actually, let's put it top right next to close for now, or just somewhere accessible
-                    zIndex: 20,
-                    opacity: 0.2, // Very subtle
-                }}
-                className="admin-lock-icon"
-             >
-                 <Lock size={16} />
-             </button>
-             <style>{`
-                 .admin-lock-icon:hover { opacity: 1 !important; }
-             `}</style>
-
-             <div style={{ zIndex: 10, maxWidth: '500px', width: '90%', textAlign: 'center' }}>
-                 <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ duration: 0.8 }}
-                 >
-                     <h1 style={{ fontFamily: 'var(--font-serif)', fontSize: '3rem', marginBottom: '10px' }}>
-                        Reuniones
-                     </h1>
-                     <p style={{ opacity: 0.5, letterSpacing: '2px', textTransform: 'uppercase', fontSize: '0.8rem', marginBottom: '50px' }}>
-                         Espacio de colaboración privado
-                     </p>
-                 </motion.div>
-
-                 <form onSubmit={handleJoin} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                     <div style={{ position: 'relative' }}>
-                         <User size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-                         <input 
-                            type="text" 
-                            placeholder="Tu Nombre"
-                            value={userName}
-                            onChange={(e) => setUserName(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '15px 15px 15px 45px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: '5px',
-                                color: '#fff',
-                                outline: 'none',
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '1rem'
-                            }}
-                         />
-                     </div>
-
-                     <div style={{ position: 'relative' }}>
-                         <Video size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
-                         <input 
-                            type="text" 
-                            placeholder="Nombre de la Sala"
-                            value={roomName}
-                            onChange={(e) => setRoomName(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '15px 15px 15px 45px',
-                                background: 'rgba(255,255,255,0.05)',
-                                border: '1px solid rgba(255,255,255,0.1)',
-                                borderRadius: '5px',
-                                color: '#fff',
-                                outline: 'none',
-                                fontFamily: 'var(--font-sans)',
-                                fontSize: '1rem'
-                            }}
-                         />
-                     </div>
-
-                     <button 
-                        type="submit"
-                        disabled={!userName || !roomName}
+            <AnimatePresence mode="wait">
+                {!inMeeting ? (
+                    <motion.div
+                        key="lobby"
+                        variants={containerVariants}
                         style={{
-                            marginTop: '20px',
-                            background: '#fff',
-                            color: '#000',
-                            padding: '15px',
-                            borderRadius: '5px',
-                            textTransform: 'uppercase',
-                            letterSpacing: '3px',
-                            fontWeight: '600',
+                            width: '100%',
+                            height: '100%',
                             display: 'flex',
                             justifyContent: 'center',
                             alignItems: 'center',
-                            gap: '10px',
-                            opacity: (!userName || !roomName) ? 0.5 : 1,
-                            cursor: (!userName || !roomName) ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.3s'
+                            flexDirection: 'column'
                         }}
-                     >
-                         Entrar <ArrowRight size={18} />
-                     </button>
-                 </form>
-             </div>
+                    >
+                        {/* Admin Trigger */}
+                        <div
+                            style={{ position: 'absolute', top: 40, right: 40, cursor: 'pointer', opacity: 0.3, zIndex: 60 }}
+                            onClick={() => setIsAdminPanelOpen(true)}
+                        >
+                            <Lock size={20} />
+                        </div>
 
-             {/* ADMIN MODAL */}
-             <AnimatePresence>
-                 {showAdminPanel && (
-                     <motion.div
-                        initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-                        animate={{ opacity: 1, backdropFilter: 'blur(10px)' }}
-                        exit={{ opacity: 0, backdropFilter: 'blur(0px)' }}
-                        style={{
-                            position: 'fixed',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            zIndex: 100,
-                            background: 'rgba(0,0,0,0.8)',
-                            display: 'flex',
-                            justifyContent: 'center',
-                            alignItems: 'center'
-                        }}
-                     >
-                         <motion.div
-                            initial={{ scale: 0.9, y: 20 }}
-                            animate={{ scale: 1, y: 0 }}
+                        {/* Welcome Text */}
+                        <motion.h1
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
                             style={{
-                                width: '100%',
-                                maxWidth: '400px',
-                                background: '#111',
-                                border: '1px solid #333',
-                                padding: '40px',
-                                position: 'relative'
+                                fontSize: 'clamp(2rem, 5vw, 4rem)',
+                                fontFamily: 'var(--font-serif)',
+                                marginBottom: '10px',
+                                textAlign: 'center'
                             }}
-                         >
-                             <button
-                                onClick={() => { setShowAdminPanel(false); setIsAdminAuthenticated(false); }}
-                                style={{ position: 'absolute', top: '15px', right: '15px', opacity: 0.5 }}
-                             >
-                                 <X size={20} />
-                             </button>
+                        >
+                            sala de reuniones
+                        </motion.h1>
 
-                             {!isAdminAuthenticated ? (
-                                 <div style={{ textAlign: 'center' }}>
-                                     <Lock size={30} style={{ marginBottom: '20px', opacity: 0.7 }} />
-                                     <h3 style={{ textTransform: 'uppercase', letterSpacing: '2px', marginBottom: '20px' }}>Admin Access</h3>
-                                     <input 
-                                        type="password"
-                                        placeholder="Contraseña Maestra"
-                                        value={adminPasswordInput}
-                                        onChange={(e) => setAdminPasswordInput(e.target.value)}
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            background: '#222',
-                                            border: 'none',
-                                            color: '#fff',
-                                            marginBottom: '20px',
-                                            textAlign: 'center'
-                                        }}
-                                        autoFocus
-                                        onKeyDown={(e) => e.key === 'Enter' && handleAdminUnlock()}
-                                     />
-                                     <button
-                                        onClick={handleAdminUnlock}
-                                        style={{
-                                            width: '100%',
-                                            padding: '10px',
-                                            border: '1px solid #444',
-                                            color: '#fff',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '2px',
-                                            fontSize: '0.7rem'
-                                        }}
-                                     >
-                                         Desbloquear
-                                     </button>
-                                 </div>
-                             ) : (
-                                 <div>
-                                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '30px', color: '#4caf50' }}>
-                                         <ShieldCheck size={20} />
-                                         <span style={{ textTransform: 'uppercase', letterSpacing: '2px', fontSize: '0.8rem' }}>Admin Verificado</span>
-                                     </div>
+                        <motion.p
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 0.6 }}
+                            transition={{ delay: 0.3 }}
+                            style={{
+                                marginBottom: '50px',
+                                letterSpacing: '1px',
+                                textTransform: 'uppercase',
+                                fontSize: '0.8rem'
+                            }}
+                        >
+                            espacio de trabajo privado
+                        </motion.p>
 
-                                     <div style={{ marginBottom: '20px' }}>
-                                          <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.6, marginBottom: '5px' }}>
-                                              Nombre de Sala
-                                          </label>
-                                          <input 
-                                            type="text" 
+
+                        {/* INPUT FORMS */}
+                        <motion.div
+                            initial={{ y: 30, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.4 }}
+                            style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '20px',
+                                width: '100%',
+                                maxWidth: '350px'
+                            }}
+                        >
+                            {!isAdminAuthenticated ? (
+                                <>
+                                    <div className="input-group" style={{ position: 'relative' }}>
+                                        <User size={18} style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Tu nombre"
+                                            value={userName}
+                                            onChange={(e) => setUserName(e.target.value)}
+                                            style={{
+                                                width: '100%',
+                                                padding: '15px 15px 15px 45px',
+                                                background: 'rgba(255,255,255,0.05)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '8px',
+                                                color: '#fff',
+                                                fontSize: '1rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="input-group" style={{ position: 'relative' }}>
+                                        <Video size={18} style={{ position: 'absolute', left: 15, top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }} />
+                                        <input
+                                            type="text"
+                                            placeholder="Nombre de la sala"
                                             value={roomName}
                                             onChange={(e) => setRoomName(e.target.value)}
-                                            style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid #333', color: '#fff' }}
-                                          />
-                                     </div>
-
-                                     <div style={{ marginBottom: '20px' }}>
-                                          <label style={{ display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '1px', opacity: 0.6, marginBottom: '5px' }}>
-                                              Contraseña de Sala
-                                          </label>
-                                          <input 
-                                            type="text"
-                                            value={newRoomPassword}
-                                            onChange={(e) => setNewRoomPassword(e.target.value)}
-                                            placeholder="Opcional"
-                                            style={{ width: '100%', padding: '10px', background: '#222', border: '1px solid #333', color: '#fff' }}
-                                          />
-                                     </div>
-
-                                     <div style={{ marginBottom: '30px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                         <input 
-                                            type="checkbox"
-                                            checked={enableLobby}
-                                            onChange={(e) => setEnableLobby(e.target.checked)}
-                                         />
-                                         <label style={{ fontSize: '0.8rem', opacity: 0.8 }}>Habilitar Lobby (Sala de Espera)</label>
-                                     </div>
-
-                                     <button
-                                        onClick={(e) => {
-                                            if(!userName) setUserName("Admin"); // Default admin name
-                                            handleJoin(e);
-                                            setShowAdminPanel(false);
+                                            style={{
+                                                width: '100%',
+                                                padding: '15px 15px 15px 45px',
+                                                background: 'rgba(255,255,255,0.05)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '8px',
+                                                color: '#fff',
+                                                fontSize: '1rem',
+                                                outline: 'none'
+                                            }}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={() => handleJoinRoom(false)}
+                                        disabled={!roomName || !userName}
+                                        style={{
+                                            padding: '15px',
+                                            borderRadius: '8px',
+                                            background: '#fff',
+                                            color: '#000',
+                                            border: 'none',
+                                            fontSize: '1rem',
+                                            fontWeight: '600',
+                                            cursor: !roomName || !userName ? 'not-allowed' : 'pointer',
+                                            opacity: !roomName || !userName ? 0.5 : 1,
+                                            display: 'flex',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            transition: 'transform 0.2s ease'
                                         }}
+                                        onMouseEnter={(e) => !(!roomName || !userName) && (e.target.style.transform = 'scale(1.02)')}
+                                        onMouseLeave={(e) => e.target.style.transform = 'scale(1)'}
+                                    >
+                                        ENTRAR <ArrowRight size={18} />
+                                    </button>
+                                </>
+                            ) : (
+                                // ADMIN CREATION VIEW
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+                                >
+                                    <div style={{ padding: '10px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', textAlign: 'center', fontSize: '0.9rem', color: '#aaa', marginBottom: '10px' }}>
+                                        <ShieldCheck size={16} style={{ marginBottom: '-3px', marginRight: '5px' }} /> Panel de Administrador
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Tu nombre (Admin)"
+                                        value={userName}
+                                        onChange={(e) => setUserName(e.target.value)}
+                                        className="styled-input"
                                         style={{
                                             width: '100%',
                                             padding: '15px',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '8px',
+                                            color: '#fff'
+                                        }}
+                                    />
+                                    <input
+                                        type="text"
+                                        placeholder="Crear nombre de sala"
+                                        value={roomName}
+                                        onChange={(e) => setRoomName(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '15px',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '8px',
+                                            color: '#fff'
+                                        }}
+                                    />
+                                    <input
+                                        type="password"
+                                        placeholder="Establecer contraseña (opcional)"
+                                        value={newRoomPassword}
+                                        onChange={(e) => setNewRoomPassword(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '15px',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: '8px',
+                                            color: '#fff'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => handleJoinRoom(true)}
+                                        disabled={!roomName || !userName}
+                                        style={{
+                                            padding: '15px',
+                                            borderRadius: '8px',
                                             background: '#fff',
                                             color: '#000',
+                                            border: 'none',
                                             fontWeight: 'bold',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '2px'
+                                            cursor: 'pointer'
                                         }}
-                                     >
-                                         Crear / Entrar
-                                     </button>
-                                 </div>
-                             )}
-                         </motion.div>
-                     </motion.div>
-                 )}
-             </AnimatePresence>
+                                    >
+                                        CREAR Y PROTEGER
+                                    </button>
+                                    <button
+                                        onClick={() => setIsAdminAuthenticated(false)}
+                                        style={{
+                                            background: 'transparent',
+                                            border: 'none',
+                                            color: '#aaa',
+                                            fontSize: '0.8rem',
+                                            cursor: 'pointer',
+                                            textDecoration: 'underline'
+                                        }}
+                                    >
+                                        Salir del modo admin
+                                    </button>
+                                </motion.div>
+                            )}
+                        </motion.div>
+
+                        {/* Admin Password Modal */}
+                        <AnimatePresence>
+                            {isAdminPanelOpen && !isAdminAuthenticated && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    style={{
+                                        position: 'fixed',
+                                        top: 0, left: 0, width: '100%', height: '100%',
+                                        background: 'rgba(0,0,0,0.8)',
+                                        zIndex: 100,
+                                        display: 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}
+                                >
+                                    <motion.div
+                                        variants={panelVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        exit="exit"
+                                        style={{
+                                            background: '#111',
+                                            padding: '40px',
+                                            borderRadius: '16px',
+                                            border: '1px solid #333',
+                                            width: '90%',
+                                            maxWidth: '400px',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <X
+                                            size={20}
+                                            style={{ position: 'absolute', top: 15, right: 15, cursor: 'pointer', opacity: 0.5 }}
+                                            onClick={() => { setIsAdminPanelOpen(false); setAdminPasswordInput(''); }}
+                                        />
+                                        <h3 style={{ marginBottom: '20px', fontFamily: 'var(--font-serif)', fontSize: '1.5rem' }}>Acceso Admin</h3>
+                                        <input
+                                            type="password"
+                                            autoFocus
+                                            placeholder="Contraseña del sistema"
+                                            value={adminPasswordInput}
+                                            onChange={(e) => setAdminPasswordInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleAdminUnlock()}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                background: '#222',
+                                                border: '1px solid #444',
+                                                color: '#fff',
+                                                borderRadius: '8px',
+                                                marginBottom: '15px'
+                                            }}
+                                        />
+                                        <button
+                                            onClick={handleAdminUnlock}
+                                            style={{
+                                                width: '100%',
+                                                padding: '12px',
+                                                background: '#fff',
+                                                color: '#000',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            DESBLOQUEAR
+                                        </button>
+                                    </motion.div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                    </motion.div>
+                ) : (
+                    // MEETING IFRAME CONTAINER
+                    <motion.div
+                        key="meeting"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        transition={{ duration: 0.5 }}
+                        style={{ width: '100%', height: '100%', position: 'relative' }}
+                    >
+                        <div ref={jitsiRef} style={{ width: '100%', height: '100%' }} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };
