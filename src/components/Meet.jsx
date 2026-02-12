@@ -102,25 +102,44 @@ const Meet = ({ setCurrentView }) => {
                     enableWelcomePage: false,
                     prejoinPageEnabled: false,
                     disableDeepLinking: true,
-                    enableClosePage: false,
+                    enableClosePage: false, // Don't show the "thank you" page
+                    
+                    // UI Customization
+                    hideConferenceTimer: true,
+                    hideConferenceSubject: true, // Hide room name
+                    
+                    // Try to minimize branding
+                    disable1On1Mode: true, // simplified view
+                    fileRecordingsEnabled: false,
+                    liveStreamingEnabled: false,
                     requireDisplayName: false,
-                    enableUserRolesBasedOnToken: false,
                     enableInsecureRoomNameWarning: false,
                 },
                 interfaceConfigOverwrite: {
+                    // Toolbar settings
                     TOOLBAR_BUTTONS: [
                         'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                        'security'
+                        'fodeviceselection', 'hangup', 'profile', 'chat', 
+                        'settings', 'raisehand', 'videoquality', 'tileview', 
+                        'videobackgroundblur'
                     ],
+                    
+                    // Branding hiding (Best effort for free tier)
                     SHOW_JITSI_WATERMARK: false,
                     SHOW_WATERMARK_FOR_GUESTS: false,
+                    SHOW_BRAND_WATERMARK: false,
+                    brandWatermarkLink: '',
+                    SHOW_POWERED_BY: false,
+                    SHOW_DEEP_LINKING_IMAGE: false,
+                    MOBILE_APP_PROMO: false,
+                    
+                    // Appearance
                     DEFAULT_BACKGROUND: '#000000',
                     DEFAULT_LOCAL_DISPLAY_NAME: 'Yo',
+                    DEFAULT_REMOTE_DISPLAY_NAME: 'Participante',
                     DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
+                    CONNECTION_INDICATOR_DISABLED: true,
+                    VIDEO_LAYOUT_FIT: 'both',
                 }
             };
 
