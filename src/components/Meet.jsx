@@ -56,6 +56,8 @@ const Meet = ({ setCurrentView }) => {
         }
         setInMeeting(false);
         setNewRoomPassword('');
+        // Optional: Return to home after hangup if desired, or stay in lobby
+        // setCurrentView('home'); 
     };
 
     // --- INITIALIZE MEETING ---
@@ -170,10 +172,15 @@ const Meet = ({ setCurrentView }) => {
                 overflow: 'hidden'
             }}
         >
-            {/* Logo */}
-            <div style={{ position: 'absolute', top: 40, left: 40, zIndex: 50, cursor: 'pointer', width: '50px' }} onClick={() => setCurrentView('home')}>
-                <MinimalLogo />
-            </div>
+            {/* Logo in corner - Only show in lobby to avoid overlap with Jitsi UI */}
+            {!inMeeting && (
+                <div 
+                    style={{ position: 'absolute', top: 40, left: 40, zIndex: 50, cursor: 'pointer', width: '50px' }} 
+                    onClick={() => setCurrentView('home')}
+                >
+                    <MinimalLogo />
+                </div>
+            )}
 
             <AnimatePresence mode="wait">
                 {!inMeeting ? (
