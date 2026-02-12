@@ -72,10 +72,10 @@ const Meet = ({ setCurrentView }) => {
                 return;
             }
 
-            console.log('Initializing Jitsi on Framatalk...');
+            console.log('Initializing Jitsi on Freifunk Munich...');
             
-            // DOMAIN: Using framatalk.org to avoid mandatory auth on meet.jit.si
-            const domain = "framatalk.org"; 
+            // DOMAIN: Using meet.ffmuc.net (Freifunk Munich) which usually allows anonymous room creation
+            const domain = "meet.ffmuc.net"; 
             
             // Generate a safe room name
             const safeRoomName = `colmillo-${roomName.replace(/\s+/g, '-').toLowerCase()}`;
@@ -96,6 +96,7 @@ const Meet = ({ setCurrentView }) => {
                     enableClosePage: false,
                     requireDisplayName: false,
                     disableDeepLinking: true,
+                    // FFMUC specific settings might be needed, but standard ones usually work
                 },
                 interfaceConfigOverwrite: {
                     SHOW_JITSI_WATERMARK: false,
