@@ -2,6 +2,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Menu = ({ isOpen, setIsOpen, setView }) => {
+    // Isolated Meeting App Menu - Simplified or kept same for consistency
+    // Keeping 'Reuniones' active here since this is the dedicated app
     const menuLinks = [
         { name: 'Nosotrxs', view: 'manifesto' },
         { name: 'Proyectos', view: 'projects' },
