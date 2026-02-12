@@ -97,9 +97,15 @@ const Meet = ({ setCurrentView }) => {
                     displayName: userName
                 },
                 configOverwrite: {
-                    prejoinPageEnabled: false,
                     startWithAudioMuted: true,
                     startWithVideoMuted: true,
+                    enableWelcomePage: false,
+                    prejoinPageEnabled: false,
+                    disableDeepLinking: true,
+                    enableClosePage: false,
+                    requireDisplayName: false,
+                    enableUserRolesBasedOnToken: false,
+                    enableInsecureRoomNameWarning: false,
                 },
                 interfaceConfigOverwrite: {
                     TOOLBAR_BUTTONS: [
@@ -114,6 +120,7 @@ const Meet = ({ setCurrentView }) => {
                     SHOW_WATERMARK_FOR_GUESTS: false,
                     DEFAULT_BACKGROUND: '#000000',
                     DEFAULT_LOCAL_DISPLAY_NAME: 'Yo',
+                    DISABLE_JOIN_LEAVE_NOTIFICATIONS: true,
                 }
             };
 
