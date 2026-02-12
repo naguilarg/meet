@@ -104,6 +104,10 @@ const Meet = ({ setCurrentView }) => {
                     SHOW_JITSI_WATERMARK: false,
                     SHOW_WATERMARK_FOR_GUESTS: false,
                     SHOW_BRAND_WATERMARK: false,
+                    JITSI_WATERMARK_LINK: '',
+                    SHOW_POWERED_BY: false,
+                    SHOW_DEEP_LINKING_IMAGE: false,
+                    MOBILE_APP_PROMO: false,
                     DEFAULT_BACKGROUND: '#000000',
                     DEFAULT_LOCAL_DISPLAY_NAME: 'Yo',
                     TOOLBAR_BUTTONS: [
@@ -172,15 +176,27 @@ const Meet = ({ setCurrentView }) => {
                 overflow: 'hidden'
             }}
         >
-            {/* Logo in corner - Only show in lobby to avoid overlap with Jitsi UI */}
-            {!inMeeting && (
-                <div 
-                    style={{ position: 'absolute', top: 40, left: 40, zIndex: 50, cursor: 'pointer', width: '50px' }} 
-                    onClick={() => setCurrentView('home')}
-                >
-                    <MinimalLogo />
-                </div>
-            )}
+            {/* Logo in corner - Consistently shown, with background to mask Jitsi logo */}
+            <div 
+                style={{ 
+                    position: 'absolute', 
+                    top: 20, 
+                    left: 20, 
+                    zIndex: 100, // Higher than everything
+                    cursor: 'pointer', 
+                    width: '50px',
+                    height: '50px',
+                    background: '#0a0a0a', // Masks the underlying Freifunk logo
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '5px'
+                }} 
+                onClick={() => handleHangup()}
+            >
+                <MinimalLogo />
+            </div>
 
             <AnimatePresence mode="wait">
                 {!inMeeting ? (
