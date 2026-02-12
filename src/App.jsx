@@ -11,7 +11,7 @@ import Meet from './components/Meet';
 import './index.css';
 
 function App() {
-  const [currentView, setCurrentView] = useState('home'); // home, manifesto, projects, contact, project-detail, meet
+  const [currentView, setCurrentView] = useState('meet'); // Default to 'meet' for the dedicated app
   const [selectedProject, setSelectedProject] = useState(null);
 
   React.useEffect(() => {
