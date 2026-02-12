@@ -74,10 +74,10 @@ const Meet = ({ setCurrentView }) => {
                 return;
             }
 
-            console.log('Initializing Jitsi on Freifunk Munich...');
+            console.log('Initializing Jitsi on Guifi.net...');
             
-            // DOMAIN: Using meet.ffmuc.net (Freifunk Munich) which usually allows anonymous room creation
-            const domain = "meet.ffmuc.net"; 
+            // DOMAIN: Using meet.guifi.net (Community Open Network) - typically cleaner UI
+            const domain = "meet.guifi.net"; 
             
             // Generate a safe room name
             const safeRoomName = `colmillo-${roomName.replace(/\s+/g, '-').toLowerCase()}`;
@@ -98,7 +98,7 @@ const Meet = ({ setCurrentView }) => {
                     enableClosePage: false,
                     requireDisplayName: false,
                     disableDeepLinking: true,
-                    // FFMUC specific settings might be needed, but standard ones usually work
+                    enableInsecureRoomNameWarning: false,
                 },
                 interfaceConfigOverwrite: {
                     SHOW_JITSI_WATERMARK: false,
@@ -176,22 +176,15 @@ const Meet = ({ setCurrentView }) => {
                 overflow: 'hidden'
             }}
         >
-            {/* Logo in corner - Consistently shown, with background to mask Jitsi logo */}
+            {/* Logo in corner */}
             <div 
                 style={{ 
                     position: 'absolute', 
-                    top: 20, 
-                    left: 20, 
-                    zIndex: 100, // Higher than everything
+                    top: 40, 
+                    left: 40, 
+                    zIndex: 100, 
                     cursor: 'pointer', 
-                    width: '50px',
-                    height: '50px',
-                    background: '#0a0a0a', // Masks the underlying Freifunk logo
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '5px'
+                    width: '50px'
                 }} 
                 onClick={() => handleHangup()}
             >
