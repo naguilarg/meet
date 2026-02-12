@@ -70,86 +70,98 @@ const Meet = ({ setCurrentView }) => {
 
     // Initialize Jitsi when inMeeting becomes true
     useEffect(() => {
-        if (inMeeting && window.JitsiMeetExternalAPI) {
-            // Add a small delay to ensure the DOM element is ready
-            const initJitsi = () => {
-                if (!jitsiRef.current) {
-                    console.error('Jitsi container not found');
-                    alert('Error: El contenedor de la videollamada no está disponible. Por favor, recarga la página.');
-                    setInMeeting(false);
-                    return;
-                }
+        let timeoutId;
+        
+        const initJitsi = () => {
+            if (!inMeeting || !window.JitsiMeetExternalAPI) {
+                return;
+            }
 
-                console.log('Initializing Jitsi...');
-                setIsJitsiLoading(true);
+            if (!jitsiRef.current) {
+                console.error('Jitsi container not found, retrying...');
+                // Retry after a short delay
+                timeoutId = setTimeout(initJitsi, 200);
+                return;
+            }
 
-                const domain = "meet.jit.si";
-                const options = {
-                    roomName: roomName,
-                    width: '100%',
-                    height: '100%',
-                    parentNode: jitsiRef.current,
-                    userInfo: {
-                        displayName: userName
-                    },
-                    configOverwrite: {
-                        prejoinPageEnabled: false,
-                        startWithAudioMuted: true,
-                        startWithVideoMuted: true,
-                    },
-                    interfaceConfigOverwrite: {
-                        TOOLBAR_BUTTONS: [
-                            'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
-                            'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
-                            'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
-                            'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
-                            'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
-                            'security'
-                        ],
-                        SHOW_JITSI_WATERMARK: false,
-                        SHOW_WATERMARK_FOR_GUESTS: false,
-                        DEFAULT_BACKGROUND: '#000000',
-                        DEFAULT_LOCAL_DISPLAY_NAME: 'Yo',
-                    }
-                };
+            console.log('Initializing Jitsi with container:', jitsiRef.current);
+            setIsJitsiLoading(true);
 
-                try {
-                    const api = new window.JitsiMeetExternalAPI(domain, options);
-                    jitsiApiRef.current = api;
-                    console.log('Jitsi API initialized');
-
-                    // Handle Events
-                    api.addEventListeners({
-                        readyToClose: () => {
-                            console.log('Jitsi ready to close');
-                            handleHangup();
-                        },
-                        videoConferenceJoined: () => {
-                            console.log('Video conference joined');
-                            setIsJitsiLoading(false);
-                            if (isAdminAuthenticated && newRoomPassword) {
-                                api.executeCommand('password', newRoomPassword);
-                            }
-                        },
-                        videoConferenceLeft: () => {
-                            console.log('Video conference left');
-                        }
-                    });
-                } catch (error) {
-                    console.error('Error initializing Jitsi:', error);
-                    alert('Error al inicializar la videollamada: ' + error.message);
-                    setInMeeting(false);
-                    setIsJitsiLoading(false);
+            const domain = "meet.jit.si";
+            const options = {
+                roomName: roomName,
+                width: '100%',
+                height: '100%',
+                parentNode: jitsiRef.current,
+                userInfo: {
+                    displayName: userName
+                },
+                configOverwrite: {
+                    prejoinPageEnabled: false,
+                    startWithAudioMuted: true,
+                    startWithVideoMuted: true,
+                },
+                interfaceConfigOverwrite: {
+                    TOOLBAR_BUTTONS: [
+                        'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+                        'fodeviceselection', 'hangup', 'profile', 'chat', 'recording',
+                        'livestreaming', 'etherpad', 'sharedvideo', 'settings', 'raisehand',
+                        'videoquality', 'filmstrip', 'invite', 'feedback', 'stats', 'shortcuts',
+                        'tileview', 'videobackgroundblur', 'download', 'help', 'mute-everyone',
+                        'security'
+                    ],
+                    SHOW_JITSI_WATERMARK: false,
+                    SHOW_WATERMARK_FOR_GUESTS: false,
+                    DEFAULT_BACKGROUND: '#000000',
+                    DEFAULT_LOCAL_DISPLAY_NAME: 'Yo',
                 }
             };
 
-            // Wait for the DOM to be ready
-            setTimeout(initJitsi, 100);
+            try {
+                const api = new window.JitsiMeetExternalAPI(domain, options);
+                jitsiApiRef.current = api;
+                console.log('Jitsi API initialized successfully');
+
+                // Handle Events
+                api.addEventListeners({
+                    readyToClose: () => {
+                        console.log('Jitsi ready to close');
+                        handleHangup();
+                    },
+                    videoConferenceJoined: () => {
+                        console.log('Video conference joined');
+                        setIsJitsiLoading(false);
+                        if (isAdminAuthenticated && newRoomPassword) {
+                            api.executeCommand('password', newRoomPassword);
+                        }
+                    },
+                    videoConferenceLeft: () => {
+                        console.log('Video conference left');
+                    }
+                });
+            } catch (error) {
+                console.error('Error initializing Jitsi:', error);
+                alert('Error al inicializar la videollamada: ' + error.message);
+                setInMeeting(false);
+                setIsJitsiLoading(false);
+            }
+        };
+
+        if (inMeeting && window.JitsiMeetExternalAPI) {
+            // Wait a bit for the DOM to be ready
+            timeoutId = setTimeout(initJitsi, 100);
         } else if (inMeeting && !window.JitsiMeetExternalAPI) {
             console.error('Jitsi API not available');
             alert('El script de Jitsi no se ha cargado correctamente. Por favor, recarga la página.');
             setInMeeting(false);
         }
+
+        // Cleanup function
+        return () => {
+            if (timeoutId) {
+                clearTimeout(timeoutId);
+            }
+        };
     }, [inMeeting, roomName, userName, isAdminAuthenticated, newRoomPassword]);
 
 
